@@ -40,6 +40,10 @@
       {
         "command": "tlcsdm.fixcnchar.replaceDocument",
         "title": "Fix Chinese Characters: Replace in Document"
+      },
+      {
+        "command": "tlcsdm.fixcnchar.upgradeVSCodeVersion",
+        "title": "Fix Chinese Characters: Upgrade VSCode Version"
       }
     ],
     "submenus": [

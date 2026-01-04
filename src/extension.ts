@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import { promisify } from 'util';
+import { exec } from 'child_process';
 
+const execAsync = promisify(exec);
 let realtimeDisposable: vscode.Disposable | undefined;
 
 /**
@@ -145,6 +150,105 @@ async function replaceInDocument(): Promise<void> {
 }
 
 /**
+ * Upgrade VSCode version
+ */
+async function upgradeVSCodeVersion(): Promise<void> {
+    try {
+        // Find workspace root
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            vscode.window.showErrorMessage('No workspace folder opened');
+            return;
+        }
+
+        const workspaceRoot = workspaceFolders[0].uri.fsPath;
+        const packageJsonPath = path.join(workspaceRoot, 'package.json');
+
+        // Check if package.json exists
+        if (!fs.existsSync(packageJsonPath)) {
+            vscode.window.showErrorMessage('package.json not found in workspace root');
+            return;
+        }
+
+        // Read current package.json
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const currentVersion = packageJson.engines?.vscode?.replace('^', '').replace('~', '') || 'unknown';
+
+        // Prompt user for new version
+        const newVersion = await vscode.window.showInputBox({
+            prompt: `Enter the target VSCode version (current: ${currentVersion})`,
+            placeHolder: 'e.g., 1.95.0',
+            value: currentVersion,
+            validateInput: (value: string) => {
+                // Basic version validation
+                const versionRegex = /^\d+\.\d+\.\d+$/;
+                if (!versionRegex.test(value)) {
+                    return 'Please enter a valid version number (e.g., 1.95.0)';
+                }
+                return null;
+            }
+        });
+
+        if (!newVersion) {
+            // User cancelled
+            return;
+        }
+
+        // Show progress
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Upgrading VSCode version to ${newVersion}`,
+            cancellable: false
+        }, async (progress) => {
+            // Update package.json
+            progress.report({ message: 'Updating package.json...' });
+            
+            if (packageJson.engines) {
+                packageJson.engines.vscode = `^${newVersion}`;
+            }
+            
+            if (packageJson.devDependencies && packageJson.devDependencies['@types/vscode']) {
+                packageJson.devDependencies['@types/vscode'] = `^${newVersion}`;
+            }
+
+            fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
+
+            // Run npm install to update package-lock.json
+            progress.report({ message: 'Running npm install...' });
+            
+            try {
+                const { stderr } = await execAsync('npm install', { 
+                    cwd: workspaceRoot,
+                    maxBuffer: 10 * 1024 * 1024  // 10MB buffer
+                });
+                
+                if (stderr && !stderr.includes('npm warn')) {
+                    console.error('npm install stderr:', stderr);
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                throw new Error(`npm install failed: ${errorMessage}`);
+            }
+
+            return Promise.resolve();
+        });
+
+        vscode.window.showInformationMessage(
+            `VSCode version upgraded to ${newVersion}. Please reload the window to apply changes.`,
+            'Reload Window'
+        ).then(selection => {
+            if (selection === 'Reload Window') {
+                vscode.commands.executeCommand('workbench.action.reloadWindow');
+            }
+        });
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Failed to upgrade VSCode version: ${errorMessage}`);
+    }
+}
+
+/**
  * Extension activation
  */
 export function activate(context: vscode.ExtensionContext): void {
@@ -157,8 +261,12 @@ export function activate(context: vscode.ExtensionContext): void {
         'tlcsdm.fixcnchar.replaceDocument',
         replaceInDocument
     );
+    const upgradeVersionCmd = vscode.commands.registerCommand(
+        'tlcsdm.fixcnchar.upgradeVSCodeVersion',
+        upgradeVSCodeVersion
+    );
 
-    context.subscriptions.push(replaceSelectionCmd, replaceDocumentCmd);
+    context.subscriptions.push(replaceSelectionCmd, replaceDocumentCmd, upgradeVersionCmd);
 
     // Register real-time listener
     registerRealtimeListener(context);

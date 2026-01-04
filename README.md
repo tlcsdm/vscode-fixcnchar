@@ -9,6 +9,7 @@ Now supports VS Code 1.107.0 and later, macOS, Linux, and Windows.
 * **Real-time replacement**: Automatically replaces Chinese punctuation (，。；：""''（）【】《》) with English symbols as you type.
 * **Context menu replacement**: Right-click on selected text and choose "tlcsdm" → "Replace Chinese Punctuation" to replace.
 * **Replace entire document**: Replace all Chinese punctuation in the current document via Command Palette.
+* **Upgrade VSCode version**: Upgrade the VSCode engine version requirement with a single command.
 * **Configurable rules**: Customize replacement rules (Chinese → English mapping) in VS Code settings.
 * **Toggle real-time replacement**: Enable or disable real-time replacement in settings.
 * **Undo/Redo support**: All replacement operations support VS Code's undo/redo mechanism.
@@ -26,6 +27,15 @@ Simply type in the editor, and Chinese punctuation will be automatically replace
 ### Replace Entire Document
 1. Open Command Palette (`Ctrl+Shift+P`)
 2. Search for "Fix Chinese Characters: Replace in Document"
+
+### Upgrade VSCode Version
+1. Open Command Palette (`Ctrl+Shift+P`)
+2. Search for "Fix Chinese Characters: Upgrade VSCode Version"
+3. Enter the target VSCode version (e.g., `1.95.0`)
+4. The extension will automatically update `package.json` and run `npm install`
+5. Reload the window when prompted to apply changes
+
+This command upgrades both the `engines.vscode` field and the `@types/vscode` dependency version in your extension's `package.json`.
 
 ## Configuration
 
