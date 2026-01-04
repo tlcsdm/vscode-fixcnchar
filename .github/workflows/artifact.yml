@@ -6,6 +6,11 @@ name: Artifact
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'images/**'
 
 permissions:
   contents: read
