@@ -1,0 +1,118 @@
+{
+  "name": "vscode-fixcnchar",
+  "displayName": "Fix Chinese Characters",
+  "description": "Automatically replace full-width Chinese punctuation with half-width English punctuation",
+  "version": "1.0.0",
+  "publisher": "tlcsdm",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tlcsdm/vscode-fixcnchar"
+  },
+  "bugs": {
+    "url": "https://github.com/tlcsdm/vscode-fixcnchar/issues"
+  },
+  "homepage": "https://github.com/tlcsdm/vscode-fixcnchar#readme",
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "categories": [
+    "Other",
+    "Formatters"
+  ],
+  "keywords": [
+    "chinese",
+    "punctuation",
+    "replace",
+    "full-width",
+    "half-width"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tlcsdm.fixcnchar.replaceSelection",
+        "title": "Replace Chinese Punctuation"
+      },
+      {
+        "command": "tlcsdm.fixcnchar.replaceDocument",
+        "title": "Fix Chinese Characters: Replace in Document"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "tlcsdm.submenu",
+        "label": "tlcsdm"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "tlcsdm.submenu",
+          "group": "tlcsdm"
+        }
+      ],
+      "tlcsdm.submenu": [
+        {
+          "command": "tlcsdm.fixcnchar.replaceSelection",
+          "when": "editorHasSelection",
+          "group": "fixcnchar"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Fix Chinese Characters",
+      "properties": {
+        "tlcsdm.fixcnchar.enableRealtime": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time replacement of Chinese punctuation while typing"
+        },
+        "tlcsdm.fixcnchar.rules": {
+          "type": "object",
+          "default": {
+            "，": ",",
+            "。": ".",
+            "；": ";",
+            "：": ":",
+            "\u201c": "\"",
+            "\u201d": "\"",
+            "\u2018": "'",
+            "\u2019": "'",
+            "（": "(",
+            "）": ")",
+            "【": "[",
+            "】": "]",
+            "《": "<",
+            "》": ">"
+          },
+          "description": "Custom replacement rules (Chinese → English punctuation mapping)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.107.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.2",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2"
+  },
+  "license": "MIT"
+}
