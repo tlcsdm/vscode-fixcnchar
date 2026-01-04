@@ -7,8 +7,8 @@ Now supports VS Code 1.107.0 and later, macOS, Linux, and Windows.
 ## Features
 
 * **Real-time replacement**: Automatically replaces Chinese punctuation (，。；：""''（）【】《》) with English symbols as you type.
-* **Manual replacement**: Use keyboard shortcut `Ctrl+Alt+R` (or `Cmd+Alt+R` on Mac) to replace Chinese punctuation in selected text.
-* **Replace entire document**: Replace all Chinese punctuation in the current document.
+* **Context menu replacement**: Right-click on selected text and choose "tlcsdm" → "Replace Chinese Punctuation" to replace.
+* **Replace entire document**: Replace all Chinese punctuation in the current document via Command Palette.
 * **Configurable rules**: Customize replacement rules (Chinese → English mapping) in VS Code settings.
 * **Toggle real-time replacement**: Enable or disable real-time replacement in settings.
 * **Undo/Redo support**: All replacement operations support VS Code's undo/redo mechanism.
@@ -18,10 +18,10 @@ Now supports VS Code 1.107.0 and later, macOS, Linux, and Windows.
 ### Real-time Replacement
 Simply type in the editor, and Chinese punctuation will be automatically replaced with English symbols (when enabled).
 
-### Manual Replacement
+### Manual Replacement (Context Menu)
 1. Select the text you want to replace
-2. Press `Ctrl+Alt+R` (Windows/Linux) or `Cmd+Alt+R` (Mac)
-3. Or use Command Palette (`Ctrl+Shift+P`) and search for "Fix Chinese Characters: Replace in Selection"
+2. Right-click to open context menu
+3. Select "tlcsdm" → "Replace Chinese Punctuation"
 
 ### Replace Entire Document
 1. Open Command Palette (`Ctrl+Shift+P`)

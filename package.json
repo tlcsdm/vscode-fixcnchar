@@ -35,21 +35,34 @@
     "commands": [
       {
         "command": "tlcsdm.fixcnchar.replaceSelection",
-        "title": "Fix Chinese Characters: Replace in Selection"
+        "title": "Replace Chinese Punctuation"
       },
       {
         "command": "tlcsdm.fixcnchar.replaceDocument",
         "title": "Fix Chinese Characters: Replace in Document"
       }
     ],
-    "keybindings": [
+    "submenus": [
       {
-        "command": "tlcsdm.fixcnchar.replaceSelection",
-        "key": "ctrl+alt+r",
-        "mac": "cmd+alt+r",
-        "when": "editorTextFocus"
+        "id": "tlcsdm.submenu",
+        "label": "tlcsdm"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "tlcsdm.submenu",
+          "group": "tlcsdm"
+        }
+      ],
+      "tlcsdm.submenu": [
+        {
+          "command": "tlcsdm.fixcnchar.replaceSelection",
+          "when": "editorHasSelection",
+          "group": "fixcnchar"
+        }
+      ]
+    },
     "configuration": {
       "title": "Fix Chinese Characters",
       "properties": {
