@@ -6,7 +6,7 @@ let realtimeDisposable: vscode.Disposable | undefined;
  * Get replacement rules from configuration
  */
 function getRules(): Map<string, string> {
-    const config = vscode.workspace.getConfiguration('fixcnchar');
+    const config = vscode.workspace.getConfiguration('tlcsdm.fixcnchar');
     const rulesObj = config.get<Record<string, string>>('rules', {});
     return new Map(Object.entries(rulesObj));
 }
@@ -15,7 +15,7 @@ function getRules(): Map<string, string> {
  * Check if real-time replacement is enabled
  */
 function isRealtimeEnabled(): boolean {
-    const config = vscode.workspace.getConfiguration('fixcnchar');
+    const config = vscode.workspace.getConfiguration('tlcsdm.fixcnchar');
     return config.get<boolean>('enableRealtime', true);
 }
 
@@ -150,11 +150,11 @@ async function replaceInDocument(): Promise<void> {
 export function activate(context: vscode.ExtensionContext): void {
     // Register commands
     const replaceSelectionCmd = vscode.commands.registerCommand(
-        'fixcnchar.replaceSelection',
+        'tlcsdm.fixcnchar.replaceSelection',
         replaceInSelection
     );
     const replaceDocumentCmd = vscode.commands.registerCommand(
-        'fixcnchar.replaceDocument',
+        'tlcsdm.fixcnchar.replaceDocument',
         replaceInDocument
     );
 
@@ -165,7 +165,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Listen for configuration changes
     const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('fixcnchar')) {
+        if (event.affectsConfiguration('tlcsdm.fixcnchar')) {
             registerRealtimeListener(context);
         }
     });

@@ -2,7 +2,7 @@
 
 Automatically replace full-width Chinese punctuation with half-width English punctuation. This tool helps developers maintain consistent punctuation without frequently switching input methods.
 
-Now supports VS Code 1.96.0 and later, macOS, Linux, and Windows.
+Now supports VS Code 1.107.0 and later, macOS, Linux, and Windows.
 
 ## Features
 
@@ -33,8 +33,8 @@ Open VS Code Settings and search for "Fix Chinese Characters" to configure:
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `fixcnchar.enableRealtime` | boolean | `true` | Enable real-time replacement while typing |
-| `fixcnchar.rules` | object | See below | Custom replacement rules |
+| `tlcsdm.fixcnchar.enableRealtime` | boolean | `true` | Enable real-time replacement while typing |
+| `tlcsdm.fixcnchar.rules` | object | See below | Custom replacement rules |
 
 ### Default Replacement Rules
 
@@ -71,7 +71,7 @@ Open VS Code Settings and search for "Fix Chinese Characters" to configure:
 
 ## Build
 
-This project uses TypeScript and npm.
+This project uses TypeScript and npm (Node.js 22).
 
 ```bash
 # Install dependencies

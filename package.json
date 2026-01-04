@@ -14,7 +14,7 @@
   },
   "homepage": "https://github.com/tlcsdm/vscode-fixcnchar#readme",
   "engines": {
-    "vscode": "^1.96.0"
+    "vscode": "^1.107.0"
   },
   "categories": [
     "Other",
@@ -34,17 +34,17 @@
   "contributes": {
     "commands": [
       {
-        "command": "fixcnchar.replaceSelection",
+        "command": "tlcsdm.fixcnchar.replaceSelection",
         "title": "Fix Chinese Characters: Replace in Selection"
       },
       {
-        "command": "fixcnchar.replaceDocument",
+        "command": "tlcsdm.fixcnchar.replaceDocument",
         "title": "Fix Chinese Characters: Replace in Document"
       }
     ],
     "keybindings": [
       {
-        "command": "fixcnchar.replaceSelection",
+        "command": "tlcsdm.fixcnchar.replaceSelection",
         "key": "ctrl+alt+r",
         "mac": "cmd+alt+r",
         "when": "editorTextFocus"
@@ -53,12 +53,12 @@
     "configuration": {
       "title": "Fix Chinese Characters",
       "properties": {
-        "fixcnchar.enableRealtime": {
+        "tlcsdm.fixcnchar.enableRealtime": {
           "type": "boolean",
           "default": true,
           "description": "Enable real-time replacement of Chinese punctuation while typing"
         },
-        "fixcnchar.rules": {
+        "tlcsdm.fixcnchar.rules": {
           "type": "object",
           "default": {
             "，": ",",
@@ -93,7 +93,7 @@
     "@eslint/js": "^9.17.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "@types/vscode": "^1.96.0",
+    "@types/vscode": "^1.107.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.2.2",

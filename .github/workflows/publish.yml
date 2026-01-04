@@ -5,13 +5,18 @@ name: Publish to VS Code Marketplace
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to publish (e.g., 1.0.0)'
+      bump_version:
+        description: 'Bump version before publish (patch/minor/major), leave empty to use current version'
         required: false
-        type: string
+        type: choice
+        options:
+          - ''
+          - patch
+          - minor
+          - major
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -20,19 +25,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Update version
-        if: ${{ inputs.version }}
-        run: npm version ${{ inputs.version }} --no-git-tag-version
+      - name: Configure Git
+        if: ${{ inputs.bump_version != '' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        if: ${{ inputs.bump_version != '' }}
+        run: |
+          npm version ${{ inputs.bump_version }} -m "chore: bump version to %s"
+          git push
+          git push --tags
 
       - name: Compile
         run: npm run compile
