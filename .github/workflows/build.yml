@@ -9,14 +9,12 @@ on:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
-      - 'images/**'
   pull_request:
     branches: [master]
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
-      - 'images/**'
 
 permissions:
   contents: read
