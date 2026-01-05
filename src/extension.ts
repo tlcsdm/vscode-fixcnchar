@@ -45,7 +45,7 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
         return;
     }
 
-    realtimeDisposable = vscode.workspace.onDidChangeTextDocument(async (event) => {
+    realtimeDisposable = vscode.workspace.onDidChangeTextDocument((event) => {
         // Prevent recursive triggering for this document
         if (processingDocuments.has(event.document)) {
             return;
@@ -63,10 +63,7 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
         // Get fresh rules on each change to support dynamic configuration updates
         const rules = getRules();
 
-        // Collect all replacements to apply
-        const replacements: { range: vscode.Range; replacement: string }[] = [];
-        
-        // Process each change
+        // Process each change - find the first Chinese character that needs replacement
         for (const change of event.contentChanges) {
             // Process single character changes (both insertions and replacements for IME support)
             if (change.text.length !== 1) {
@@ -77,34 +74,42 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
             const replacement = rules.get(inputChar);
 
             if (replacement) {
-                // After the change, the character is at change.range.start
-                const position = change.range.start;
-                const replaceRange = new vscode.Range(
-                    position,
-                    position.translate(0, 1)
-                );
-                replacements.push({ range: replaceRange, replacement });
-            }
-        }
-        
-        // Apply all replacements if any
-        if (replacements.length > 0) {
-            // Sort replacements by position in reverse order to avoid position shift issues
-            replacements.sort((a, b) => b.range.start.compareTo(a.range.start));
-            
-            // Set flag to prevent recursive triggering for this document
-            processingDocuments.add(event.document);
-            try {
-                // Use edit to replace the characters (supports undo/redo)
-                // undoStopBefore: false groups this edit with the previous typing action
-                // undoStopAfter: true allows normal undo after this edit
-                await editor.edit((editBuilder) => {
-                    for (const { range, replacement } of replacements) {
-                        editBuilder.replace(range, replacement);
+                // For text changes, the new text starts at change.range.start
+                const startPos = change.range.start;
+                const endPos = startPos.translate(0, 1);
+                const replaceRange = new vscode.Range(startPos, endPos);
+
+                // Set flag to prevent recursive triggering for this document
+                processingDocuments.add(event.document);
+
+                // Use setTimeout with minimal delay to ensure we're outside the event handler
+                // This is necessary because VS Code may reject edits made during the change event
+                setTimeout(() => {
+                    try {
+                        // Verify editor is still valid
+                        const currentEditor = vscode.window.activeTextEditor;
+                        if (!currentEditor || currentEditor.document !== event.document) {
+                            processingDocuments.delete(event.document);
+                            return;
+                        }
+
+                        // Perform the replacement
+                        currentEditor.edit((editBuilder) => {
+                            editBuilder.replace(replaceRange, replacement);
+                        }, { undoStopBefore: false, undoStopAfter: true }).then((success) => {
+                            processingDocuments.delete(event.document);
+                            if (!success) {
+                                console.error('Fix Chinese Characters: Edit failed');
+                            }
+                        });
+                    } catch (error) {
+                        processingDocuments.delete(event.document);
+                        console.error('Fix Chinese Characters: Error during replacement', error);
                     }
-                }, { undoStopBefore: false, undoStopAfter: true });
-            } finally {
-                processingDocuments.delete(event.document);
+                }, 1);
+
+                // Only process one replacement per event
+                break;
             }
         }
     });
