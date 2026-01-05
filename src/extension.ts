@@ -78,31 +78,27 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
                 const startPos = change.range.start;
                 const line = startPos.line;
                 const character = startPos.character;
-                const docUri = event.document.uri;
                 const expectedChar = inputChar; // Capture for use in async callback
 
                 // Set flag to prevent recursive triggering for this document
                 processingDocuments.add(event.document);
 
-                // Use Promise.resolve().then() to ensure we're in a new microtask
-                // This is more reliable than setTimeout for immediate deferred execution
-                Promise.resolve().then(async () => {
+                // Use setImmediate-like behavior with setTimeout(0) to defer execution
+                // This allows the document change to complete before we apply our edit
+                setTimeout(async () => {
                     try {
-                        // Get the document by URI (more reliable than checking active editor)
-                        const currentDoc = vscode.workspace.textDocuments.find(
-                            doc => doc.uri.fsPath === docUri.fsPath
-                        );
-                        
-                        if (!currentDoc) {
+                        // Get the current active editor (it may have changed)
+                        const currentEditor = vscode.window.activeTextEditor;
+                        if (!currentEditor || currentEditor.document !== event.document) {
                             return;
                         }
 
                         // Verify the character at the position is still what we expect to replace
-                        if (line >= currentDoc.lineCount) {
+                        if (line >= currentEditor.document.lineCount) {
                             return;
                         }
                         
-                        const currentLine = currentDoc.lineAt(line);
+                        const currentLine = currentEditor.document.lineAt(line);
                         if (character >= currentLine.text.length) {
                             return;
                         }
@@ -114,16 +110,21 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
                         }
 
                         // Create the range for replacement
+                        // In JavaScript, String.length returns UTF-16 code units.
+                        // Chinese punctuation marks are BMP characters (single UTF-16 code unit),
+                        // so expectedChar.length === 1 for our use case.
+                        const charLength = expectedChar.length;
                         const replaceRange = new vscode.Range(
                             new vscode.Position(line, character),
-                            new vscode.Position(line, character + 1)
+                            new vscode.Position(line, character + charLength)
                         );
 
-                        // Use WorkspaceEdit for reliable editing
-                        const workspaceEdit = new vscode.WorkspaceEdit();
-                        workspaceEdit.replace(docUri, replaceRange, replacement);
-                        
-                        const success = await vscode.workspace.applyEdit(workspaceEdit);
+                        // Use editor.edit() which works better with document changes
+                        // undoStopBefore: false - groups this edit with the previous typing action
+                        // undoStopAfter: true - allows normal undo after this edit
+                        const success = await currentEditor.edit((editBuilder) => {
+                            editBuilder.replace(replaceRange, replacement);
+                        }, { undoStopBefore: false, undoStopAfter: true });
                         
                         if (!success) {
                             console.error('Fix Chinese Characters: Edit failed');
@@ -133,7 +134,7 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
                     } finally {
                         processingDocuments.delete(event.document);
                     }
-                });
+                }, 0);
 
                 // Only process one replacement per event
                 break;
