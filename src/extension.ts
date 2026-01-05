@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
 let realtimeDisposable: vscode.Disposable | undefined;
+// Track documents currently being processed to prevent recursive triggering
+const processingDocuments = new Set<vscode.TextDocument>();
 
 /**
  * Get replacement rules from configuration
@@ -43,9 +45,12 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
         return;
     }
 
-    const rules = getRules();
-
     realtimeDisposable = vscode.workspace.onDidChangeTextDocument(async (event) => {
+        // Prevent recursive triggering for this document
+        if (processingDocuments.has(event.document)) {
+            return;
+        }
+
         if (!isRealtimeEnabled()) {
             return;
         }
@@ -54,6 +59,9 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
         if (!editor || editor.document !== event.document) {
             return;
         }
+
+        // Get fresh rules on each change to support dynamic configuration updates
+        const rules = getRules();
 
         // Process each change
         for (const change of event.contentChanges) {
@@ -72,10 +80,18 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
                     position.translate(0, 1)
                 );
 
-                // Use edit to replace the character (supports undo/redo)
-                await editor.edit((editBuilder) => {
-                    editBuilder.replace(replaceRange, replacement);
-                }, { undoStopBefore: false, undoStopAfter: false });
+                // Set flag to prevent recursive triggering for this document
+                processingDocuments.add(event.document);
+                try {
+                    // Use edit to replace the character (supports undo/redo)
+                    // undoStopBefore: false groups this edit with the previous typing action
+                    // undoStopAfter: true allows normal undo after this edit
+                    await editor.edit((editBuilder) => {
+                        editBuilder.replace(replaceRange, replacement);
+                    }, { undoStopBefore: false, undoStopAfter: true });
+                } finally {
+                    processingDocuments.delete(event.document);
+                }
             }
         }
     });
