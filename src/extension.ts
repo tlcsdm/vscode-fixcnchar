@@ -63,10 +63,13 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
         // Get fresh rules on each change to support dynamic configuration updates
         const rules = getRules();
 
+        // Collect all replacements to apply
+        const replacements: { range: vscode.Range; replacement: string }[] = [];
+        
         // Process each change
         for (const change of event.contentChanges) {
-            // Only process single character insertions
-            if (change.text.length !== 1 || change.rangeLength !== 0) {
+            // Process single character changes (both insertions and replacements for IME support)
+            if (change.text.length !== 1) {
                 continue;
             }
 
@@ -74,24 +77,34 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
             const replacement = rules.get(inputChar);
 
             if (replacement) {
+                // After the change, the character is at change.range.start
                 const position = change.range.start;
                 const replaceRange = new vscode.Range(
                     position,
                     position.translate(0, 1)
                 );
-
-                // Set flag to prevent recursive triggering for this document
-                processingDocuments.add(event.document);
-                try {
-                    // Use edit to replace the character (supports undo/redo)
-                    // undoStopBefore: false groups this edit with the previous typing action
-                    // undoStopAfter: true allows normal undo after this edit
-                    await editor.edit((editBuilder) => {
-                        editBuilder.replace(replaceRange, replacement);
-                    }, { undoStopBefore: false, undoStopAfter: true });
-                } finally {
-                    processingDocuments.delete(event.document);
-                }
+                replacements.push({ range: replaceRange, replacement });
+            }
+        }
+        
+        // Apply all replacements if any
+        if (replacements.length > 0) {
+            // Sort replacements by position in reverse order to avoid position shift issues
+            replacements.sort((a, b) => b.range.start.compareTo(a.range.start));
+            
+            // Set flag to prevent recursive triggering for this document
+            processingDocuments.add(event.document);
+            try {
+                // Use edit to replace the characters (supports undo/redo)
+                // undoStopBefore: false groups this edit with the previous typing action
+                // undoStopAfter: true allows normal undo after this edit
+                await editor.edit((editBuilder) => {
+                    for (const { range, replacement } of replacements) {
+                        editBuilder.replace(range, replacement);
+                    }
+                }, { undoStopBefore: false, undoStopAfter: true });
+            } finally {
+                processingDocuments.delete(event.document);
             }
         }
     });
