@@ -76,37 +76,64 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
             if (replacement) {
                 // For text changes, the new text starts at change.range.start
                 const startPos = change.range.start;
-                const endPos = startPos.translate(0, 1);
-                const replaceRange = new vscode.Range(startPos, endPos);
+                const line = startPos.line;
+                const character = startPos.character;
+                const docUri = event.document.uri;
+                const expectedChar = inputChar; // Capture for use in async callback
 
                 // Set flag to prevent recursive triggering for this document
                 processingDocuments.add(event.document);
 
-                // Use setTimeout with minimal delay to ensure we're outside the event handler
-                // This is necessary because VS Code may reject edits made during the change event
-                setTimeout(() => {
+                // Use Promise.resolve().then() to ensure we're in a new microtask
+                // This is more reliable than setTimeout for immediate deferred execution
+                Promise.resolve().then(async () => {
                     try {
-                        // Verify editor is still valid
-                        const currentEditor = vscode.window.activeTextEditor;
-                        if (!currentEditor || currentEditor.document !== event.document) {
-                            processingDocuments.delete(event.document);
+                        // Get the document by URI (more reliable than checking active editor)
+                        const currentDoc = vscode.workspace.textDocuments.find(
+                            doc => doc.uri.fsPath === docUri.fsPath
+                        );
+                        
+                        if (!currentDoc) {
                             return;
                         }
 
-                        // Perform the replacement
-                        currentEditor.edit((editBuilder) => {
-                            editBuilder.replace(replaceRange, replacement);
-                        }, { undoStopBefore: false, undoStopAfter: true }).then((success) => {
-                            processingDocuments.delete(event.document);
-                            if (!success) {
-                                console.error('Fix Chinese Characters: Edit failed');
-                            }
-                        });
+                        // Verify the character at the position is still what we expect to replace
+                        if (line >= currentDoc.lineCount) {
+                            return;
+                        }
+                        
+                        const currentLine = currentDoc.lineAt(line);
+                        if (character >= currentLine.text.length) {
+                            return;
+                        }
+
+                        const currentChar = currentLine.text.charAt(character);
+                        if (currentChar !== expectedChar) {
+                            // Character has changed, skip replacement
+                            return;
+                        }
+
+                        // Create the range for replacement
+                        const replaceRange = new vscode.Range(
+                            new vscode.Position(line, character),
+                            new vscode.Position(line, character + 1)
+                        );
+
+                        // Use WorkspaceEdit for reliable editing
+                        const workspaceEdit = new vscode.WorkspaceEdit();
+                        workspaceEdit.replace(docUri, replaceRange, replacement);
+                        
+                        const success = await vscode.workspace.applyEdit(workspaceEdit);
+                        
+                        if (!success) {
+                            console.error('Fix Chinese Characters: Edit failed');
+                        }
                     } catch (error) {
-                        processingDocuments.delete(event.document);
                         console.error('Fix Chinese Characters: Error during replacement', error);
+                    } finally {
+                        processingDocuments.delete(event.document);
                     }
-                }, 1);
+                });
 
                 // Only process one replacement per event
                 break;
