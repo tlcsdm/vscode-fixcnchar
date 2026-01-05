@@ -63,83 +63,84 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
         // Get fresh rules on each change to support dynamic configuration updates
         const rules = getRules();
 
-        // Process each change - find the first Chinese character that needs replacement
+        // Collect replacements across all changes (handles multi-character inserts)
+        const pendingEdits: Array<{ offset: number; oldText: string; newText: string }> = [];
+
         for (const change of event.contentChanges) {
-            // Process single character changes (both insertions and replacements for IME support)
-            if (change.text.length !== 1) {
+            if (!change.text) {
                 continue;
             }
 
-            const inputChar = change.text;
-            const replacement = rules.get(inputChar);
-
-            if (replacement) {
-                // For text changes, the new text starts at change.range.start
-                const startPos = change.range.start;
-                const line = startPos.line;
-                const character = startPos.character;
-                const expectedChar = inputChar; // Capture for use in async callback
-
-                // Set flag to prevent recursive triggering for this document
-                processingDocuments.add(event.document);
-
-                // Use setImmediate-like behavior with setTimeout(0) to defer execution
-                // This allows the document change to complete before we apply our edit
-                setTimeout(async () => {
-                    try {
-                        // Get the current active editor (it may have changed)
-                        const currentEditor = vscode.window.activeTextEditor;
-                        if (!currentEditor || currentEditor.document !== event.document) {
-                            return;
-                        }
-
-                        // Verify the character at the position is still what we expect to replace
-                        if (line >= currentEditor.document.lineCount) {
-                            return;
-                        }
-                        
-                        const currentLine = currentEditor.document.lineAt(line);
-                        if (character >= currentLine.text.length) {
-                            return;
-                        }
-
-                        const currentChar = currentLine.text.charAt(character);
-                        if (currentChar !== expectedChar) {
-                            // Character has changed, skip replacement
-                            return;
-                        }
-
-                        // Create the range for replacement
-                        // In JavaScript, String.length returns UTF-16 code units.
-                        // Chinese punctuation marks are BMP characters (single UTF-16 code unit),
-                        // so expectedChar.length === 1 for our use case.
-                        const charLength = expectedChar.length;
-                        const replaceRange = new vscode.Range(
-                            new vscode.Position(line, character),
-                            new vscode.Position(line, character + charLength)
-                        );
-
-                        // Use editor.edit() which works better with document changes
-                        // undoStopBefore: false - groups this edit with the previous typing action
-                        // undoStopAfter: true - allows normal undo after this edit
-                        const success = await currentEditor.edit((editBuilder) => {
-                            editBuilder.replace(replaceRange, replacement);
-                        }, { undoStopBefore: false, undoStopAfter: true });
-                        
-                        if (!success) {
-                            console.error('Fix Chinese Characters: Edit failed');
-                        }
-                    } catch (error) {
-                        console.error('Fix Chinese Characters: Error during replacement', error);
-                    } finally {
-                        processingDocuments.delete(event.document);
-                    }
-                }, 0);
-
-                // Only process one replacement per event
-                break;
+            const newText = applyRules(change.text, rules);
+            if (newText === change.text) {
+                continue;
             }
+
+            // Capture location using offsets so we can re-verify later
+            const offset = event.document.offsetAt(change.range.start);
+            const endOffset = offset + change.text.length;
+            const currentRange = new vscode.Range(
+                change.range.start,
+                event.document.positionAt(endOffset)
+            );
+
+            // Ensure the document still contains the original change text before queuing edit
+            if (event.document.getText(currentRange) !== change.text) {
+                continue;
+            }
+
+            pendingEdits.push({ offset, oldText: change.text, newText });
         }
+
+        if (pendingEdits.length === 0) {
+            return;
+        }
+
+        processingDocuments.add(event.document);
+
+        // Defer to avoid interfering with the in-flight change event
+        setTimeout(async () => {
+            try {
+                const currentEditor = vscode.window.activeTextEditor;
+                if (!currentEditor || currentEditor.document !== event.document) {
+                    return;
+                }
+
+                const document = currentEditor.document;
+                const editsToApply: Array<{ range: vscode.Range; newText: string }> = [];
+
+                for (const { offset, oldText, newText } of pendingEdits) {
+                    const start = document.positionAt(offset);
+                    const end = document.positionAt(offset + oldText.length);
+                    const range = new vscode.Range(start, end);
+
+                    // Skip if the text has since changed
+                    if (document.getText(range) !== oldText) {
+                        continue;
+                    }
+
+                    editsToApply.push({ range, newText });
+                }
+
+                if (editsToApply.length === 0) {
+                    return;
+                }
+
+                const success = await currentEditor.edit((editBuilder) => {
+                    for (const edit of editsToApply) {
+                        editBuilder.replace(edit.range, edit.newText);
+                    }
+                }, { undoStopBefore: false, undoStopAfter: true });
+
+                if (!success) {
+                    console.error('Fix Chinese Characters: Edit failed');
+                }
+            } catch (error) {
+                console.error('Fix Chinese Characters: Error during replacement', error);
+            } finally {
+                processingDocuments.delete(event.document);
+            }
+        }, 0);
     });
 
     context.subscriptions.push(realtimeDisposable);

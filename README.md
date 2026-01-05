@@ -91,6 +91,9 @@ npm run lint
 
 # Package
 npx @vscode/vsce package
+
+# Test
+npm run test
 ```
 
 ## Related Projects
