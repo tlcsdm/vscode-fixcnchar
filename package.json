@@ -66,11 +66,6 @@
     "configuration": {
       "title": "Fix Chinese Characters",
       "properties": {
-        "tlcsdm.fixcnchar.enableRealtime": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable real-time replacement of Chinese punctuation while typing"
-        },
         "tlcsdm.fixcnchar.rules": {
           "type": "object",
           "default": {

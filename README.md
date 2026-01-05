@@ -6,17 +6,12 @@ Now supports VS Code 1.107.0 and later, macOS, Linux, and Windows.
 
 ## Features
 
-* **Real-time replacement**: Automatically replaces Chinese punctuation (，。；：""''（）【】《》) with English symbols as you type.
 * **Context menu replacement**: Right-click on selected text and choose "tlcsdm" → "Replace Chinese Punctuation" to replace.
 * **Replace entire document**: Replace all Chinese punctuation in the current document via Command Palette.
 * **Configurable rules**: Customize replacement rules (Chinese → English mapping) in VS Code settings.
-* **Toggle real-time replacement**: Enable or disable real-time replacement in settings.
 * **Undo/Redo support**: All replacement operations support VS Code's undo/redo mechanism.
 
 ## Usage
-
-### Real-time Replacement
-Simply type in the editor, and Chinese punctuation will be automatically replaced with English symbols (when enabled).
 
 ### Manual Replacement (Context Menu)
 1. Select the text you want to replace
@@ -33,7 +28,6 @@ Open VS Code Settings and search for "Fix Chinese Characters" to configure:
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `tlcsdm.fixcnchar.enableRealtime` | boolean | `true` | Enable real-time replacement while typing |
 | `tlcsdm.fixcnchar.rules` | object | See below | Custom replacement rules |
 
 ### Default Replacement Rules
