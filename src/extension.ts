@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
 let realtimeDisposable: vscode.Disposable | undefined;
+// Track documents currently being processed to prevent recursive triggering
+const processingDocuments = new Set<vscode.TextDocument>();
 
 /**
  * Get replacement rules from configuration
@@ -43,9 +45,12 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
         return;
     }
 
-    const rules = getRules();
+    realtimeDisposable = vscode.workspace.onDidChangeTextDocument((event) => {
+        // Prevent recursive triggering for this document
+        if (processingDocuments.has(event.document)) {
+            return;
+        }
 
-    realtimeDisposable = vscode.workspace.onDidChangeTextDocument(async (event) => {
         if (!isRealtimeEnabled()) {
             return;
         }
@@ -55,10 +60,13 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
             return;
         }
 
-        // Process each change
+        // Get fresh rules on each change to support dynamic configuration updates
+        const rules = getRules();
+
+        // Process each change - find the first Chinese character that needs replacement
         for (const change of event.contentChanges) {
-            // Only process single character insertions
-            if (change.text.length !== 1 || change.rangeLength !== 0) {
+            // Process single character changes (both insertions and replacements for IME support)
+            if (change.text.length !== 1) {
                 continue;
             }
 
@@ -66,16 +74,70 @@ function registerRealtimeListener(context: vscode.ExtensionContext): void {
             const replacement = rules.get(inputChar);
 
             if (replacement) {
-                const position = change.range.start;
-                const replaceRange = new vscode.Range(
-                    position,
-                    position.translate(0, 1)
-                );
+                // For text changes, the new text starts at change.range.start
+                const startPos = change.range.start;
+                const line = startPos.line;
+                const character = startPos.character;
+                const expectedChar = inputChar; // Capture for use in async callback
 
-                // Use edit to replace the character (supports undo/redo)
-                await editor.edit((editBuilder) => {
-                    editBuilder.replace(replaceRange, replacement);
-                }, { undoStopBefore: false, undoStopAfter: false });
+                // Set flag to prevent recursive triggering for this document
+                processingDocuments.add(event.document);
+
+                // Use setImmediate-like behavior with setTimeout(0) to defer execution
+                // This allows the document change to complete before we apply our edit
+                setTimeout(async () => {
+                    try {
+                        // Get the current active editor (it may have changed)
+                        const currentEditor = vscode.window.activeTextEditor;
+                        if (!currentEditor || currentEditor.document !== event.document) {
+                            return;
+                        }
+
+                        // Verify the character at the position is still what we expect to replace
+                        if (line >= currentEditor.document.lineCount) {
+                            return;
+                        }
+                        
+                        const currentLine = currentEditor.document.lineAt(line);
+                        if (character >= currentLine.text.length) {
+                            return;
+                        }
+
+                        const currentChar = currentLine.text.charAt(character);
+                        if (currentChar !== expectedChar) {
+                            // Character has changed, skip replacement
+                            return;
+                        }
+
+                        // Create the range for replacement
+                        // In JavaScript, String.length returns UTF-16 code units.
+                        // Chinese punctuation marks are BMP characters (single UTF-16 code unit),
+                        // so expectedChar.length === 1 for our use case.
+                        const charLength = expectedChar.length;
+                        const replaceRange = new vscode.Range(
+                            new vscode.Position(line, character),
+                            new vscode.Position(line, character + charLength)
+                        );
+
+                        // Use editor.edit() which works better with document changes
+                        // undoStopBefore: false - groups this edit with the previous typing action
+                        // undoStopAfter: true - allows normal undo after this edit
+                        const success = await currentEditor.edit((editBuilder) => {
+                            editBuilder.replace(replaceRange, replacement);
+                        }, { undoStopBefore: false, undoStopAfter: true });
+                        
+                        if (!success) {
+                            console.error('Fix Chinese Characters: Edit failed');
+                        }
+                    } catch (error) {
+                        console.error('Fix Chinese Characters: Error during replacement', error);
+                    } finally {
+                        processingDocuments.delete(event.document);
+                    }
+                }, 0);
+
+                // Only process one replacement per event
+                break;
             }
         }
     });

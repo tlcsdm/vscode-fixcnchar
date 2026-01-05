@@ -69,6 +69,9 @@ Open VS Code Settings and search for "Fix Chinese Characters" to configure:
 3. Search for "Extensions: Install from VSIX..."
 4. Select the downloaded `.vsix` file
 
+### From Jenkins  
+Download from [Jenkins](https://jenkins.tlcsdm.com/job/vscode-plugin/job/vscode-fixcnchar/)
+
 ## Build
 
 This project uses TypeScript and npm (Node.js 22).
