@@ -3,7 +3,7 @@
   "displayName": "Fix Chinese Characters",
   "description": "Automatically replace full-width Chinese punctuation with half-width English punctuation",
   "version": "1.0.0",
-  "publisher": "tlcsdm",
+  "publisher": "unknowIfGuestInDream",
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
