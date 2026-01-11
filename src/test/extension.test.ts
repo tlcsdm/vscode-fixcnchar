@@ -5,11 +5,11 @@ suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
 
     test('Extension should be present', () => {
-        assert.ok(vscode.extensions.getExtension('tlcsdm.vscode-fixcnchar'));
+        assert.ok(vscode.extensions.getExtension('unknowIfGuestInDream.vscode-fixcnchar'));
     });
 
     test('Commands should be registered', async () => {
-        const extension = vscode.extensions.getExtension('tlcsdm.vscode-fixcnchar');
+        const extension = vscode.extensions.getExtension('unknowIfGuestInDream.vscode-fixcnchar');
         await extension?.activate();
 
         const commands = await vscode.commands.getCommands(true);
