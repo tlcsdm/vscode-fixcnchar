@@ -40,3 +40,9 @@ jobs:
         run: npm run lint
       - name: Compile
         run: npm run compile
+      - name: Test (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test
+      - name: Test (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: npm run test
