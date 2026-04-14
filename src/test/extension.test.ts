@@ -21,7 +21,7 @@ suite('Extension Test Suite', () => {
         const config = vscode.workspace.getConfiguration('tlcsdm.fixcnchar');
         const rules = config.get<Record<string, string>>('rules');
         assert.ok(rules);
-        assert.strictEqual(rules['，'], ',');
-        assert.strictEqual(rules['。'], '.');
+        assert.strictEqual(rules!['，'], ',');
+        assert.strictEqual(rules!['。'], '.');
     });
 });
